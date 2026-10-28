@@ -1,0 +1,259 @@
+<title>Buscador de Asignaturas UNIAJC</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: barra de búsqueda fija arriba; filtros en chips; resultados agrupados por programa en una sola columna legible */
+:root{
+  --bg:#f5f7fa; --surface:#ffffff; --ink:#152033; --muted:#5b6678; --line:#dde3ec;
+  --accent:#1f4fd1; --accent-soft:#e6edfd; --mark:#ffe58a; --mark-ink:#152033;
+  --fi:#1f4fd1; --fce:#0f8a6a; --fedv:#b2560e; --fcsh:#8a3fb8;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1420; --surface:#161e2d; --ink:#e7ecf4; --muted:#97a3b6; --line:#263247;
+  --accent:#7ea2ff; --accent-soft:#1c2a4a; --mark:#5a4a10; --mark-ink:#fff3c4;
+  --fi:#7ea2ff; --fce:#45c9a4; --fedv:#f0a05b; --fcsh:#c58cf0; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1420; --surface:#161e2d; --ink:#e7ecf4; --muted:#97a3b6; --line:#263247;
+  --accent:#7ea2ff; --accent-soft:#1c2a4a; --mark:#5a4a10; --mark-ink:#fff3c4;
+  --fi:#7ea2ff; --fce:#45c9a4; --fedv:#f0a05b; --fcsh:#c58cf0; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:var(--surface);border-bottom:1px solid var(--line)}
+header.top .wrap{padding-block:22px 18px;display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(1.5rem,4vw,2.1rem);line-height:1.1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:4px 0 0;font-size:.95rem}
+.totals{font-family:var(--mono);font-size:.8rem;color:var(--muted);display:flex;gap:16px;font-variant-numeric:tabular-nums}
+.totals b{color:var(--ink);font-weight:500}
+
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);box-shadow:0 6px 18px -14px rgba(10,20,40,.35)}
+.bar .wrap{padding-block:12px;display:flex;flex-direction:column;gap:10px}
+.search{position:relative}
+.search svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+#q{width:100%;font:inherit;font-size:1.05rem;padding:13px 92px 13px 44px;border:1.5px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);outline:none}
+#q:focus{border-color:var(--accent);background:var(--surface)}
+.search .right{position:absolute;right:8px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:6px}
+kbd{font-family:var(--mono);font-size:.72rem;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--muted)}
+#clear{font:inherit;font-size:.82rem;border:0;background:var(--accent-soft);color:var(--accent);border-radius:8px;padding:5px 10px;cursor:pointer}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.flabel{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+.chip{font:inherit;font-size:.85rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--c,var(--accent))}
+.chip[aria-pressed="true"]{border-color:var(--c,var(--accent));background:var(--accent-soft);font-weight:600}
+.sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+select{font:inherit;font-size:.85rem;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:4px 10px;max-width:100%;min-width:0}
+button:focus-visible,select:focus-visible,.chip:focus-visible,.pcard:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+main .wrap{padding-block:18px 48px}
+.status{color:var(--muted);font-size:.9rem;margin:0 0 14px;font-variant-numeric:tabular-nums}
+.status b{color:var(--ink)}
+
+.group{background:var(--surface);border:1px solid var(--line);border-radius:12px;margin-bottom:12px;overflow:hidden}
+.ghead{width:100%;font:inherit;color:inherit;text-align:left;background:none;border:0;cursor:pointer;display:flex;align-items:center;gap:12px;padding:12px 16px;border-left:4px solid var(--c)}
+.ghead .t{flex:1;min-width:0}
+.pname{font-family:var(--display);font-weight:600;font-size:1.06rem;line-height:1.25}
+.meta{font-size:.8rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.fac{color:var(--c);font-weight:600}
+.count{font-family:var(--mono);font-size:.8rem;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chev{transition:transform .15s;color:var(--muted);flex:none}
+.group.closed .chev{transform:rotate(-90deg)}
+.group.closed ol{display:none}
+ol{list-style:none;margin:0;padding:4px 0 8px;border-top:1px solid var(--line);columns:2 280px;column-gap:24px}
+li{padding:5px 16px;break-inside:avoid;display:flex;gap:10px;align-items:baseline}
+li .n{font-family:var(--mono);font-size:.7rem;color:var(--muted);min-width:1.8em;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+li.dim{color:var(--muted)}
+mark{background:var(--mark);color:var(--mark-ink);border-radius:3px;padding:0 1px}
+.lvl{font-size:.68rem;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--line);border-radius:4px;padding:0 5px}
+
+.overview h2{font-family:var(--display);font-weight:600;font-size:1.15rem;margin:22px 0 10px;display:flex;align-items:center;gap:8px}
+.overview h2 .dot{width:10px;height:10px;border-radius:50%;background:var(--c)}
+.overview h2 small{font-family:var(--body);font-weight:400;font-size:.85rem;color:var(--muted)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.pcard{font:inherit;color:inherit;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:6px}
+.pcard:hover{border-color:var(--c)}
+.pcard .pname{font-size:.98rem}
+.empty{text-align:center;padding:48px 16px;color:var(--muted)}
+.empty b{color:var(--ink)}
+.hint{font-size:.85rem;color:var(--muted);margin-top:4px}
+.hint code{font-family:var(--mono);font-size:.8rem;background:var(--accent-soft);color:var(--accent);padding:1px 6px;border-radius:4px;cursor:pointer;border:0}
+@media (max-width:520px){kbd{display:none}#q{padding-right:70px}}
+@media (prefers-reduced-motion:reduce){.chev{transition:none}}
+</style>
+
+<header class="top"><div class="wrap">
+  <div>
+    <h1>Asignaturas <span>UNIAJC</span></h1>
+    <p class="sub">Busca una asignatura, un programa o una facultad. Tildes y mayúsculas no importan.</p>
+  </div>
+  <div class="totals" id="totals"></div>
+</div></header>
+
+<div class="bar"><div class="wrap">
+  <div class="search">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Ej: calculo, programacion, contaduria, FCE…" aria-label="Buscar asignatura, programa o facultad">
+    <div class="right"><kbd>/</kbd><button id="clear" type="button" hidden>Limpiar</button></div>
+  </div>
+  <div class="filters" id="filters"></div>
+</div></div>
+
+<main><div class="wrap" id="out"></div></main>
+
+<script>
+const DATA = [{"f":"FI","p":"Ingeniería de Sistemas","a":["Lógica y Razonamiento","Matemáticas Básica","Introducción a la Ingeniería","Cátedra Institucional","Medio Ambiente","Comunicación y Lenguaje I","Cálculo diferencial","Matemáticas Discretas","Álgebra lineal","Introducción al Análisis a la Solución de Problemas","Programación I","Comunicación y Lenguaje II","Cálculo integral","Física I","Programación II","Seminario de Sistemas","Liderazgo y Emprendimiento","Principios de Economía","Calculo Vectorial","Física II","Ingeniería de Software I","Fundamentos Web","Programación III","Humanidades I","Ecuaciones Diferenciales","Estadística I","Programación IV","Bases de Datos I","Electrónica Digital","Constitución y Ciudadanía","Estadística II","Programación V","Ingeniería del Software II","Bases de Datos II","Arquitectura de Sistemas Computacionales","Sistemas Operativos","Métodos numéricos","Electiva I","Redes I","Organización y Administración I","Formulación y Evaluación de Proyectos de Ingeniería","Humanidades II","Electiva II","Redes II","Organización y Administración II","Temática de Grado","Etica y Responsabilidad Social","Innovación y Emprendimiento Tecnológico","Electiva III","Gerencia de Proyectos","Trabajo de Grado I","Práctica Empresarial","Seminario de Actualización","Trabajo de Grado II","Seguridad","Análisis de Entornos"]},{"f":"FI","p":"Ingeniería Electrónica","a":["Comunicación y Lenguaje","Cátedra Institucional","Matemáticas Básicas","Lógica y Razonamiento","Ambiente y Sostenibilidad","Introducción a la Ingeniería","Constitución y Ciudadanía","Calculo Diferencial","Algebra Lineal","Humanidades","Seminario de Electrónica","Programación I","Calculo Integral","Física I","Ingeniería Económica","Circuitos DC","Programación II","Liderazgo y Emprendimiento","Calculo Vectorial","Física II","Circuitos AC","Electrónica Digital","Electrónica I","Diseño Electrónico e Industrial","Física III","Electricidad Industrial","Señales y Sistemas","Electrónica II","Estadística y Probabilidad","Ecuaciones Diferenciales","Sistemas Electrónicos Programables","Sistemas Dinámicos","Formulación y Evaluación de Proyectos de Ingeniería","Emprendimiento e Innovación","Conversión de Energía","Sistemas de Comunicación","Instrumentación Industrial","Control de Sistemas","Seminario de Trabajo de Grado","Sistemas Energéticos Renovables","Redes e IoT","Automatización Industrial","Trabajo de grado I","Practica Formativa","Electiva I","Diseño de Productos Tecnológicos","Ética y Responsabilidad Social","Dirección de Proyectos en Ingeniería","Análisis de Entornos","Trabajo de grado II","Electiva II","Electiva III"]},{"f":"FI","p":"Ingeniería Industrial","a":["Introducción a la Ingeniería","Lógica y Razonamiento","Matemática Fundamental","Ambiente y Sostenibilidad","Cátedra Institucional","Comunicación y Lenguaje I","Fundamentos de economía","Álgebra Lineal","Cálculo Diferencial","Mediciones y Registro","Humanidades","Comunicación y Lenguaje II","Organización y Modelos Gerenciales","Calculo integral","Liderazgo y emprendimiento","Química de los materiales","Programación I","Física I","Gestión contable","Estadística I","Programación II","Física II","Constitución y ciudadanía","Calculo vectorial","Procesos de producción industriales","Ingeniería económica","Dibujo Técnico","Estadística II","Ecuaciones diferenciales","Ingeniería de métodos","Formulación y evaluación de proyectos","Termo fluidos","Ingeniería de Costos","CAD (diseño Asistido Por computador)","Planeación y Control de la Producción","Control estadístico de procesos","Gerencia de Proyectos","Emprendimiento e innovación","Ética","Logística integral","Investigación de operaciones","Seguridad y salud en el trabajo","Gestión de mantenimiento","Distribución en Planta","Temática de grado","Modelos y simulación","Gestión y aseguramiento de la calidad","Optimización y analítica de datos","Práctica Empresarial","Electiva Profesional I (industria 4.0)","Trabajo de Grado I","Auditoría de SIGC","Electiva Profesional II","Responsabilidad social empresarial","Trabajo de Grado II"]},{"f":"FCE","p":"Administración de Empresas","a":["Matemáticas I","Ciencia, Tecnología y Desarrollo","Comunicación y Lenguaje I","Administración I (General y Proceso Administrativo)","Fundamentos Contables","Cátedra Institucional","Comunicación y Lenguaje II","Humanidades","Matemática II","Análisis de la Gestión Contable","Constitución y ciudadanía","Administración II (Control y Planeación)","Fundamento de Investigación Formativa","Liderazgo y Emprendimiento","Administración III (RH – Compensación)","Matemáticas Financiera","Análisis de Entornos Económicos","Probabilidad y Estadística","Administración IV (Enfoques Administrativos)","Legislación Comercial","Economía Colombia y Comercio Exterior","Seminario de Tecnología","Costos Administrativos","Investigación de Operaciones","Ambiente y Sostenibilidad","Administración de los Negocios Tecnológicos","Legislación Laboral","Administración y Diagnóstico Financiero","Fundamentos y Prospectiva de Mercados","Ética Profesional y Responsabilidad Social","Presupuestos","Desarrollo Organizacional","Gerencia del Talento Humano","Negocios Internacionales","Mercadeo Global","Formulación y Evaluación de Proyectos","Administración Pública","Emprendimiento e Innovación","Metodología de la Investigación","Finanzas I","Gestión de la Calidad y la productividad","Gerencia de Proyectos","Electiva I","Electiva II","Práctica Empresarial","Finanzas II","Proyecto de Grado I","Gerencia Estratégica I","Electiva III","Gerencia Estratégica II","Proyecto de Grado II","Sistema de Información Gerencial","Marketing Digital"]},{"f":"FCE","p":"Contaduría pública","a":["Ciencia, Tecnología y Desarrollo","Comunicación y Lenguaje I","Matemática Fundamental","Cátedra Institucional","Humanidades","Fundamentos de Contabilidad","Seminario de Tecnología","Constitución Política y Ciudadanía","Cálculo","Comunicación y Lenguaje II","Contabilidad de Recursos e Inversión","Ambiente y Sostenibilidad","Administración General","Economía I","Programación Lineal","Matemática Financiera","Legislación Comercial","Contabilidad de Financiación","Liderazgo y Emprendimiento","Economía II","Aseguramiento I","Administración y Diagnóstico Financiero","Legislación Laboral","Estados Financieros","Mercadeo","Estadística y Probabilidad","Aseguramiento II","Contabilidad de Negocios Conjuntos y Consolidación","Contabilidad Ambiental y Reporte Integrado","Gestión de Costos","Analítica de Datos","Teoría Contable","Gobernanza y Gobierno Corporativo","Gestión Tributaria I","Práctica Empresarial","Gestión de Presupuestos","Contabilidades Especiales","Contabilidad y Presupuesto Público","Emprendimiento e Innovación","Gestión Tributaria II","Finanzas I","Sistema de Gestión","Seminario de Trabajo de Grado","Finanzas II","Laboratorio y Consultoría Contable","Electiva de Profundización","Formulación y Evaluación de Proyectos","Contraloría","Trabajo de Grado I","Ética y Desarrollo Profesional","Electiva de Profundización","Revisoría Fiscal","Trabajo de Grado II"]},{"f":"FCE","p":"Mercadeo y Publicidad","a":["Historia y Teorías de Mercadeo","Historia y Teorías de Publicidad","Administración General","Constitución Política y Ciudadanía","Matemática Fundamental","Comunicación y Lenguaje I","Catedra Institucional","Cálculo","Comunicación y Lenguaje II","Fundamentos de Contabilidad","Seminario de Tecnología","Fundamentos de Mercadeo","Fundamentos de Publicidad","Estadística y Probabilidad I","Taller Creativo I","Liderazgo y Emprendimiento","Microeconomía","Costos y Presupuesto","Comportamiento del Consumidor","Producto y Precio","Macroeconomía","Estadística y Probabilidad II","Taller Creativo II","Semiotica Publicitaria","Ambiente y sostenibilidad","Diseño Publicitario","Redacción Publicitaría","Producción Audiovisual","Estrategias de Mercadeo y Publicidad","Emprendimiento e Innovación","Investigación de Mercados","Distribución y Promoción","Formulación y Evaluación de Proyectos","Seminario de Investigación","Técnicas de Negociación","Ética y Responsabilidad Social Empresarial","Derecho Comercial","Medios Digitales","Plan de Mercadeo","Plan de Publicidad","Electiva de Profundización","Practica Empresarial I","Tendencias de Mercadeo y Publicidad","Simulación e Inteligencia de Mercados","Trabajo de Grado I","Practica Empresarial II","Trabajo de Grado II","Branding","Electiva de Profundización"]},{"f":"FEDV","p":"Administración en Salud","a":["Matemática fundamental","Comunicación y lenguaje I","Cátedra institucional UNIAJC","Fundamentos de la administración","Ciencia, tecnología y desarrollo","Cálculo","Comunicación y lenguaje II","Administración de las organizaciones","Constitución política y ciudadanía","Sociología de la salud","Humanidades","Estrategia y planeación","Liderazgo y emprendimiento","Ambiente y sustentabilidad","Matemática financiera","Contabilidad I","Fundamentos de la salud pública","Contabilidad II","Administración en salud I","Gestión de talento humano","Legislación laboral","Estadística I","Microeconomía","Administración en salud II","Investigación de operaciones I","Legislación en seguridad social integral","Costos en salud","Estadística II","Macroeconomía","Finanzas","Legislación en salud I","Facturación en salud","Investigaciones de operaciones II","Economía de la salud","Ética profesional","Presupuestos en salud","Gestión integral en salud y ambiente","Legislación en salud II","Indicadores hospitalarios","Economía del medicamento","Formulación y evaluación de proyectos","Auditoría en salud I","Evaluación de tecnologías sanitarias","Gerencia estratégica y prospectiva","Emprendimiento e innovación","Seminario de trabajo de grado","Fundamentos de la epidemiología","Práctica Profesional","Auditoría en Salud II","Trabajo de grado I","Vigilancia epidemiológica","Electiva I","Electiva II","Calidad total en las organizaciones de salud","Trabajo de grado II","Salud pública enfocada a la administración en salud","Estrategias de marketing en salud"]},{"f":"FEDV","p":"Licenciatura en Educación Infantil","a":["Matemática Fundamental","Comunicación y Lenguaje I","Humanidades","Filosofía de la Educación","Cátedra Institucional","Comunicación y Lenguaje II","Ambiente y Sostenibilidad","Constitución y Ciudadanía","Sociología de la Educación","Electiva I","Ética y Axiología","Didáctica General","Desarrollo Humano y Educación","Liderazgo y Emprendimiento","Práctica de Fundamentación","Electiva II","Práctica Educativa I","Desarrollo Infantil","Bases Epistemológicas de la Infancia","Juego, Lúdica y Creatividad","Entornos de Atención a la Infancia","Electiva III","Práctica Educativa II","Neuropsicología del Desarrollo","La Infancia como Fenómeno Social","Didáctica para la Infancia","Contexto Familiar y Escolar","Electiva IV","Dirección Educativa","Investigación en Educación y Pedagogía I","Práctica Educativa III","Infancia y Diversidad","Escuela y Educación Inicial","Didácticas Emergentes","Liderazgo e Innovación","Investigación en Educación y Pedagogía II","Práctica Pedagógica I","Diversidad, Cultura y Poblaciones","Escuela y Educación Infantil","Adaptaciones Didácticas","Seminario de Trabajo de Grado","Práctica Pedagógica II","Retos Sociales y Educativos de la Sociedad del Conocimiento","Didáctica, Innovación y TIC","Contextos y Realidades","Electiva V","Trabajo de Grado I","Práctica de Profundización I","Lengua Extranjera e Infancia I","Currículo y Educación Inclusiva","Mediaciones Escolares con TIC","Trabajo de Grado II","Práctica de Profundización II","Lengua Extranjera e Infancia II"]},{"f":"FEDV","p":"Licenciatura en Ciencias del Deporte y la Educación Física","a":["Cátedra Institucional","Comunicación y Lenguaje I","Humanidades","Matemática Fundamental","Sociología de la Educación","Epistemología de la Educación Física","Constitución Política y Ciudadanía","Comunicación y Lenguaje II","Ambiente y Sostenibilidad","Educación y Pedagogía","Cuerpo y Desarrollo Humano","Didáctica General","Liderazgo y Emprendimiento","Ética y Axiología","Práctica de Fundamentación","Didáctica de la Educación Física y el Deporte","Psicomotricidad","Epistemología de las Ciencias del Deporte","Estadística y Probabilidad","Práctica Pedagógica I","Procesos y prácticas Evaluativas","Juego, lúdica y creatividad","Anatomía funcional","Práctica Pedagógica II","Currículo","Innovación y Mediación Didáctica","Fisiología del Ejercicio I","Fundamentos del Entrenamiento Deportivo","Inclusión y Educación Física","Práctica Pedagógica III","Disciplinas Deportivas Individuales I","Fisiología del Ejercicio II","Bases Metodológicas del Entrenamiento Deportivo","Inclusión y Deporte","Emprendimiento e innovación","Práctica Pedagógica IV","Disciplinas Deportivas Individuales II","Psicología del Deporte","Planificación del Entrenamiento Deportivo","Deporte y Desarrollo Comunitario","Práctica Pedagógica V","Seminario de Trabajo de Grado","Disciplinas Deportivas de Oposición","Ejercicio y Salud","Política Pública para el Deporte y la Educación Física","Práctica Pedagógica VI","Trabajo de Grado I","Disciplinas Deportivas de Cooperación-Oposición I","Innovación Aplicada al Movimiento Humano","Electiva I","Trabajo de Grado II","Disciplinas Deportivas de Cooperación-Oposición II","Gestión y Organización de Proyectos Educativos y Deportivos","Electiva II"]},{"f":"FEDV","p":"Administración en Seguridad y Salud en el Trabajo","a":["Matemáticas Fundamental","Humanidades","Cátedra Institucional","Comunicación y Lenguaje I","Fundamentos en Administración","Biología Humana","Cálculo","Constitución Política y Ciudadanía","Comunicación y Lenguaje II","Fundamentos de Seguridad y Salud en el Trabajo y Seguridad Social Integral","Química Fundamental","Física","Liderazgo y emprendimiento","Anatomía y Fisiología del Trabajo","Costos y Presupuestos","Electiva","Ambiente y Sustentabilidad","Expresión Gráfica y uso de las TIC en la Gestión","Peligros Biológicos","Métodos de Trabajo Seguro","Peligros de las Condiciones de Seguridad I (Eléctricos y Mecánicos)","Electiva","Estadística I","Legislación Laboral","Peligros Químicos","Métodos de Evaluación y Valoración de Riesgos","Cultura Organizacional","Peligros de las Condiciones de Seguridad II (Locativos y Tecnológicos)","Legislación en Seguridad y Salud en el Trabajo","Gestión de la Salud Laboral","Ergonomía basada en Factores Humanos","Gestión y Planeación Estratégica","Peligros Físicos I: Ruido – Vibración","Liderazgo e innovación","Sistema de Gestión de Seguridad y Salud en el Trabajo I","Psicología del Trabajo","Investigación de Accidentes e incidentes de Trabajo","Ergonomía Centrada en la Actividad","Peligros Físicos II: Temperaturas Extremas – Iluminación – Radiaciones","Seminario de Trabajo de Grado","Sistema de Gestión de Seguridad y Salud en el Trabajo II","Vigilancia Epidemiológica","Prevención, preparación y respuesta ante emergencias","Trabajo decente e inclusión laboral","Formulación y Evaluación de Proyectos","Práctica Formativa","Trabajo de Grado I","Plan estratégico de Seguridad Vial","Gestión y Aseguramiento de la Calidad","Trabajo de Grado II","Salud Pública y Saneamiento Ambiental","Seguridad en Tareas de Alto Riesgo","Auditoría de los Sistemas de Gestión"]},{"f":"FCSH","p":"Trabajo Social","a":["Cátedra Institucional","Constitución Política","Comunicación I Escritura y Comprensión de Textos","Matemáticas Fundamental","Historia Política y Social de Colombia","Introducción al Trabajo Social","Gestión Ambiental","Problemas Colombianos","Comunicación II – Seminario de Comunicación Social","Estadística","Fundamentos de Investigación","Sociología I","Historia y Teorías Contemporáneas del Trabajo Social","Problemas Regionales","Economía","Psicología del Desarrollo","Antropología Cultural","Sociología II","Trabajo Social con Individuos y Familia","Liderazgo y Emprendimiento","Psicología Social","Gestión de la Organización","Planeación","Investigación Social I","Trabajo Social con Grupos","Ciencias Políticas","Planes de Desarrollo y Políticas Públicas","Gestión y Diseño de Proyectos Sociales","Investigación Social II","Trabajo Social con Comunidades","Sistematización de Experiencias","Metodologías para la Intervención Social","Práctica Profesional I","Ética Profesional","Práctica Profesional II","Liderazgo y emprendimiento","Seminario de Trabajo de Grado","Economía Solidaria","Trabajo de Grado I","Trabajo Social, Desarrollo, Post Desarrollo y Buen Vivir","Estudio de Género, Diversidad y Poblaciones","Electiva I: Administración de Proyectos Sociales","Electiva I: Ciudadanía y Paz","Trabajo de Grado II","Política y Legislación Social","Electiva II: Trabajo Social y Educación","Electiva II: Diseño de Proyectos Culturales"]},{"f":"FCSH","p":"Comunicación Social","a":["Matemática Fundamental","Ambiente y Sostenibilidad","Comunicación y Lenguaje","Cátedra Institucional","Teorías de la Comunicación I","Comunicación e Interculturalidad","Ética y Deontología del Comunicado","Expresión Oral y Escrita","Teorías de la Comunicación II","Semiótica","Comunicación, Cultura y Territorio","Herramientas TIC para la Comunicación","Constitución Política y Ciudadanía","Teoría de la Argumentación","Liderazgo y Emprendimiento","Teoría de la Imagen","Fotografía","Taller de escritura","Psicología y Comunicación","Proyecto Editorial","Comunicación y Mediación de Conflictos","Comunicación, Desarrollo y Gestión Comunitaria","Comunicación Organizacional","Estadística y Probabilidad","Humanidades","Taller de Radio","Proyecto Radiofónico","Movimientos Sociales y Derechos Humanos","Emprendimiento e innovación","Taller Audiovisual","Proyecto Audiovisual","Comunicación, Memoria Histórica y Construcción de Paz","Diseño y Gestión de Proyectos en Comunicación","Seminario de Investigación","Medios y Contenidos Digitales","Narrativas Multiplataforma","Marketing Digital y Social Media","Comunicación Estratégica en Entornos Digitales","Trabajo de Grado I","Práctica Profesional","Electiva I","Electiva de Profundización I","Trabajo de Grado II","Seminario Derechos de Autor","Electiva II","Electiva de Profundización II"]},{"f":"FCSH","p":"Diseño Visual","a":["Cátedra Institucional","Socioantropologia","Comunicación y lenguaje","Teoría de la comunicación","Teoría del Color","Matemáticas 1","Gestión Ambiental","Ética","Fundamentos del Diseño","Teoría de la Imagen 1","Medios 1","Imagen fotográfica","Liderazgo y Emprendimiento","Constitución Política y Ciudadanía","Teoría de la imagen 2","Medios 2","Imagen Ilustrada","Gestión del Diseño 1","Psicología y Comunicación","Teoría de la Argumentación","Escuelas y vanguardias del diseño","Estética","Medios 3","Tipografía Creativa","Estadística","Análisis Audiovisual","Investigación en Diseño","Diseño Editorial","Identidad Visual","Diseño, Cultura y Sociedad","Modelado Digital","Electiva 1","Humanidades","Diseño Audiovisual","Proyecto transmedia","Gestión del Diseño 2","Diseño de información","Social Media","Emprendimiento e innovación","Electiva 2","Seminario de investigación","Diseño ambiental y señalética","Práctica Formativa","Proyecto de grado 1","Electiva 3","Seminario Derechos de autor","Gestión del Diseño 3","Proyecto de grado 2"]},{"f":"FEDV","p":"Especialización en Ergonomía","a":["Identidad institucional","Fundamentos de la ergonomía I","Ergonomía Cognitiva","Ergonomía Organizacional","Ergonomía e innovación I","Fundamentos de Ergonomía II","Gestión Ergonómica","Factores humanos","Descripción y Análisis de Datos","Ergonomía e innovación II"]},{"f":"FCE","p":"Especialización en Aseguramiento de la Información y Control Interno","a":["Identidad Institucional","Teoría General del Control Organizacional","Sistemas de Control Interno","Auditoría Interna","Normas y Declaraciones Internacionales de Auditoría","Ética y Gobierno Corporativo","Administración del Riesgo Corporativo","Auditorias de Gestión y Calidad","Auditorias Financiera y de Cumplimiento","Diagnóstico Organizacional e Indicadores de Gestión","Aseguramiento de la Información"]},{"f":"FCSH","p":"Especialización en Ciudadanía, Derechos y Gestión de Paz","a":["Introducción a la Ciudadanía","Economía, Desarrollo y Ciudadanía","Derechos Humanos y DIH","Marco Constitucional y Mecanismos de Participación","Introducción a los Estudios de Paz y Conflicto","Procesos de Paz en Colombia","Identidad Institucional","Planeación y Políticas Públicas","Ética Ciudadana y Ciudadanía Activa","Modelos de Justicia Alternativos","Enfoque de Género, Diversidad y Poblaciones","Educación para la Paz","Ciudadanía y Narrativas Virtuales"]},{"f":"FI","p":"Especialización en Gestión de Bases de Datos","a":["Identidad UNIAJC","Gestión de proyectos de Software","Modelado y construcción de bases de datos no relacionales","Modelado y construcción de bases de datos relacionales","Arquitecturas de bases de datos","Administración de bases de datos","Análisis exploratorio de datos","Estructuras de datos avanzadas","Aseguramiento de la información","Proyecto: Aplicación de Técnicas y Herramientas de Análisis de Datos"]},{"f":"FI","p":"Especialización en Analítica de Datos Organizacionales","a":["Identidad UNIAJC","Fundamentos de Estadística para la Analítica de Datos","Fundamentos de Programación para la Analítica de Datos","Aprendizaje Supervisado y no Supervisado","Herramientas de Análisis de Datos","Análisis de Datos para la Toma de Decisiones","Ética en el Uso de Datos y Privacidad","Casos de Estudio, Aplicaciones y Tendencias de la Analítica de Datos","Visualización de Datos","Proyecto: Aplicación de Técnicas y Herramientas de Análisis de Datos"]},{"f":"FCE","p":"Especialización en Gerencia de Negocios","a":["Identidad institucional","Entorno organizacional, competitividad e innovación","Finanzas para la toma de decisiones","Mercadeo global","Desarrollo directivo prospectivo","Plan de empresa","Sistemas de control gerencial y Bussines analitycs","Liderazgo y responsabilidad social","Economía gerencia y geopolítica","Gerencia de la cultura organizacional","Estrategia financiera","Gerencia estratégica del marketing","Gerencia de los negocios internacionales","Estrategia y competitividad global","Proyecto de gestión gerencial"]},{"f":"FI","p":"Especialización en Aseguramiento de la Calidad de Software","a":["Identidad Institucional","Calidad de Software","Marcos de trabajo ágil","Métricas y estándares de calidad","Seminario de aseguramiento de la calidad de software","Automatización y herramientas de pruebas","Testing en entornos de desarrollo ágil","Tecnologías emergentes en el aseguramiento de la calidad","Electiva","Proyecto"]},{"f":"FI","p":"Maestría en Ingeniería de Software","a":["Identidad Institucional","Análisis de requisitos","Calidad de Software","Desarrollo de Software","Diseño detallado de software","Seminario de Actualización","Emprendimiento e Innovación","Arquitectura de software","Ciencias de Datos","DevOps","Seminario de Investigación 1","Metodología desarrollo de software","Planeación y Gestión de Proyectos de Ingeniería","Ética y Responsabilidad Social","Seminario de Investigación 2","Proceso de Desarrollo de Software","Electiva I","Electiva II","Proyecto de Profundización","Electiva III","Electiva IV"]},{"f":"FI","p":"Maestría en Ingeniería Electrónica","a":["Diseño de Experimentos para Ingeniería","Diseño para IoT","Identidad Institucional","Seminario de Investigación I","Electiva I","Gestión de Proyectos en Ingeniería","Analítica de Datos","Aprendizaje de Maquinas","Seminario de Investigación II","Electiva II","Gestión de la Innovación","Inteligencia Artificial","Trabajo de Profundización","Electiva III"]},{"f":"FEDV","p":"Maestría en Enseñanza de la Matemática","a":["Matemáticas Fundamentales I","Formación Pedagógica en Matemática I","Formación Pedagógica en Matemática II","Matemáticas Fundamentales II","Formación Pedagógica en Matemática III","Tópicos Especiales en Educación Matemática I","Matemáticas Fundamentales III","Tópicos Especiales en Educación Matemática II","Seminario de Posgrado","Tópicos Especiales en Educación Matemática III","Tesis"]},{"f":"FI","p":"Tecnología en Electrónica Industrial","a":["Matemáticas I","Laboratorio de Matemáticas I","Seminario I","Comunicación y Lenguaje","Ciencia, Tecnología y Desarrollo","Cátedra Institucional","Matemáticas II","Laboratorio de Matemáticas II","Algebra Lineal","Circuitos Eléctricos I","Biodiversidad y Gestión Ambiental","Humanidades","Matemáticas III","Física I","Circuitos Eléctricos II","Iniciativa Empresarial","Algoritmia y Programación","Física II","Electrónica Analógica I","Electrónica Digital","Practica Empresarial I","Sistemas Digitales Programables","Sistemas de Control Analógicos","Electrónica Análoga II","Maquinas y Accionamientos","Temática de grado I (Metodología)","Practica Empresarial II","Controladores Industriales","Electrónica Industrial I","Electiva I","Ética Profesional","Temática de Grado II","Electrónica Industrial II","Gestión de Mantenimiento Industrial","Electiva II","Temática de Grado III","Desarrollo de aplicaciones IoT","Redes de Datos","Sistemas Electroneumáticos","Desarrollo de Aplicaciones Web","Redes Industriales","Variadores","Ciberseguridad"]},{"f":"FI","p":"Tecnología en Sistemas de Información","a":["Matemáticas I","Laboratorio de Matemáticas I","Seminario I","Comunicación y Lenguaje","Ciencia, Tecnología y Desarrollo","Cátedra Institucional UNIAJC","Algebra Lineal","Fundamentos de Programación","Fundamentos en Tecnología del Computador","Laboratorio de Matemáticas II","Matemáticas II","Biodiversidad y Gestión Ambiental","Base de datos I","Física I","Humanidades","Iniciativa Empresarial","Programación I","Base de Datos II","Ingeniería de Software I","Estadística y Probabilidad","Programación II","Estructura de Datos","Practica I","Seminario Integrador","Ingeniería de Software II","Comunicación de Datos I","Métodos Numéricos","Programación III","Practica II","Legislación Informática","Proyecto de Grado I","Banco de Electivas I","Sistemas Operativos","Ética profesional","Proyecto de Grado II","Banco de Electivas II","Desarrollo de aplicación WEB I","Programación de dispositivos móviles I","Herramientas Avanzadas de desarrollo y pruebas de software","Programación de dispositivos móviles II","Ciberseguridad"]},{"f":"FI","p":"Tecnología en Producción Industrial","a":["Introducción a Tecnología Producción Industrial","Humanidades","Matemática Fundamental","Algebra Lineal","Comunicación y Lenguaje","Cátedra Institucional UNIAJC","Estadística y Probabilidad","Cálculo","Dibujo Técnico y CAD","Ambiente y Sostenibilidad","Química","Constitución y Ciudadanía","Física I","Métodos y Tiempos","Informática Aplicada","Mediciones y Fundamentos de Metrología","Liderazgo y Emprendimiento","Investigación de Operaciones","Requerimientos y Producción Industrial","Modelos de la Administración de la Producción","Costos de Producción","Distribución en Planta","Temática de grado","Planificación del Mantenimiento","Sistemas Integrados de Gestión","Electiva I","Práctica Empresarial I","Emprendimiento e Innovación","Trabajo de Grado I","Ética y Responsabilidad Social","Práctica Empresarial II","Trabajo de Grado II","Gestión de la Mejora Continua","Logística Integral","Auditoría de Calidad","Electiva II","Gestión del Talento Humano","Modelamiento y Simulación de Procesos","Industria Inteligente","Sistema de información integrados"]},{"f":"FCE","p":"Tecnología en Contabilidad Sistematizada","a":["Cátedra Institucional","Comunicación y Lenguaje I","Constitución y Ciudadanía","Fundamentos de Contabilidad","Humanidades","Matemática Fundamental","Administración General","Ambiente y Sostenibilidad","Cálculo","Comunicación y Lenguaje II","Contabilidad I","Ciencia, Tecnología y Desarrollo","Contabilidad II","Estadística y Probabilidad","Ética y responsabilidad Social","Liderazgo y emprendimiento","Matemática Financiera","Seminario de Tecnología","Administración y Diagnóstico Financiero","Contabilidad III","Costos y Presupuestos","Legislación Comercial y Laboral","Seminario de Trabajo de Grado","Analítica de datos","Tributaria","Aseguramiento","Electiva I","Práctica Empresarial I","Trabajo de Grado I","Economía","Electiva II","Emprendimiento e innovación","Práctica Empresarial II","Sistema de Gestión","Trabajo de Grado II"]},{"f":"FCE","p":"Tecnología en Gestión Empresarial","a":["Ciencia, tecnología y desarrollo","Administración I","Constitución política y ciudadana","Matemática fundamental","Comunicación y Lenguaje","Catedra institucional","Calculo","Comunicación y lenguaje II","Análisis de entornos económicos","Fundamentos contables","Administración II","Humanidades","Estadística y probabilidad","Seminario de tecnologías","Liderazgo y emprendimiento","Administración III","Legislación comercial","Empresa sostenible","Contabilidad comercial","Matemática financiera","Mercadeo","Práctica empresarial I","Costos Y presupuestos","Ambiente y sostenibilidad","Emprendimiento e innovación","Electiva I","Práctica empresarial II","Legislación laboral","Presupuestos","Mercadeo","Legislación Laboral","Formulación y evaluación de proyectos","Investigación de operaciones","Seminario de trabajo de grado","Electiva II","Ética y responsabilidad social empresarial","Trabajo de grado","Calidad empresarial sostenible","Analítica de datos"]}];
+const FAC = {
+  FI:{n:"Facultad de Ingenierías",c:"--fi"},
+  FCE:{n:"Facultad de Ciencias Empresariales",c:"--fce"},
+  FEDV:{n:"Facultad de Educación a Distancia y Virtual",c:"--fedv"},
+  FCSH:{n:"Facultad de Ciencias Sociales y Humanas",c:"--fcsh"}
+};
+const LEVELS = ["Tecnología","Profesional","Especialización","Maestría"];
+const levelOf = p => /^Maestr/i.test(p)?"Maestría":/^Especiali/i.test(p)?"Especialización":/^Tecnolog/i.test(p)?"Tecnología":"Profesional";
+
+const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+// normaliza carácter a carácter para conservar posiciones al resaltar
+const normKeep = s => Array.from(s).map(ch => norm(ch)[0] ?? ch).join("");
+const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const PROGS = DATA.map((d,i)=>({
+  id:i, f:d.f, p:d.p, lvl:levelOf(d.p),
+  ctx: norm(`${d.p} ${d.f} ${FAC[d.f]?.n||""} ${levelOf(d.p)}`),
+  subj: d.a.map((a,j)=>({a, n:j+1, k:norm(a), hk:normKeep(a)}))
+}));
+const total = PROGS.reduce((s,p)=>s+p.subj.length,0);
+const unique = new Set(PROGS.flatMap(p=>p.subj.map(s=>s.k))).size;
+document.getElementById("totals").innerHTML =
+  `<span><b>${Object.keys(FAC).length}</b> facultades</span><span><b>${PROGS.length}</b> programas</span><span><b>${unique}</b> asignaturas distintas</span>`;
+
+const state = { q:"", fac:null, lvl:null, prog:"" , open:new Set() };
+try{ const s = JSON.parse(localStorage.getItem("uniajc-buscador")||"{}"); if(s.fac) state.fac=s.fac; if(s.lvl) state.lvl=s.lvl; }catch(e){}
+
+const $q = document.getElementById("q"), $out = document.getElementById("out"),
+      $filters = document.getElementById("filters"), $clear = document.getElementById("clear");
+
+function renderFilters(){
+  const facChips = Object.entries(FAC).map(([k,v]) =>
+    `<button class="chip" type="button" style="--c:var(${v.c})" data-fac="${k}" aria-pressed="${state.fac===k}" title="${v.n}"><span class="dot"></span>${k}</button>`).join("");
+  const lvlChips = LEVELS.map(l => `<button class="chip" type="button" data-lvl="${l}" aria-pressed="${state.lvl===l}">${l}</button>`).join("");
+  const opts = PROGS.filter(p=>(!state.fac||p.f===state.fac)&&(!state.lvl||p.lvl===state.lvl))
+    .sort((a,b)=>a.p.localeCompare(b.p,"es"))
+    .map(p=>`<option value="${p.id}" ${String(p.id)===state.prog?"selected":""}>${esc(p.p)}</option>`).join("");
+  $filters.innerHTML = `<span class="flabel">Facultad</span>${facChips}<span class="sep"></span>
+    <span class="flabel">Nivel</span>${lvlChips}<span class="sep"></span>
+    <select id="prog" aria-label="Programa"><option value="">Todos los programas</option>${opts}</select>`;
+}
+
+function highlight(item, terms){
+  if(!terms.length) return esc(item.a);
+  const marks = new Array(item.a.length).fill(false);
+  const chars = Array.from(item.a); const hk = item.hk;
+  for(const t of terms){ let i = hk.indexOf(t); while(i>-1){ for(let k=i;k<i+t.length;k++) marks[k]=true; i = hk.indexOf(t,i+1);} }
+  let out="", open=false;
+  chars.forEach((ch,i)=>{ if(marks[i]&&!open){out+="<mark>";open=true} if(!marks[i]&&open){out+="</mark>";open=false} out+=esc(ch); });
+  return out+(open?"</mark>":"");
+}
+
+function filteredProgs(){
+  return PROGS.filter(p => (!state.fac||p.f===state.fac) && (!state.lvl||p.lvl===state.lvl) && (!state.prog||String(p.id)===state.prog));
+}
+
+function render(){
+  const terms = norm(state.q).trim().split(/\s+/).filter(Boolean);
+  $clear.hidden = !state.q;
+  const progs = filteredProgs();
+  const anyFilter = state.fac||state.lvl||state.prog;
+
+  if(!terms.length && !state.prog){
+    // Vista general: programas por facultad
+    const byFac = {};
+    progs.forEach(p => (byFac[p.f] ||= []).push(p));
+    const n = progs.reduce((s,p)=>s+p.subj.length,0);
+    $out.innerHTML = `<p class="status">${anyFilter?`<b>${progs.length}</b> programas con <b>${n}</b> asignaturas en el filtro actual.`:"Elige un programa para ver su plan, o escribe arriba para buscar."}</p>
+      <div class="overview">` + Object.keys(FAC).filter(f=>byFac[f]).map(f => `
+        <h2 style="--c:var(${FAC[f].c})"><span class="dot"></span>${FAC[f].n} <small>${f} · ${byFac[f].length} programas</small></h2>
+        <div class="cards">${byFac[f].map(p=>`
+          <button class="pcard" type="button" style="--c:var(${FAC[f].c})" data-open="${p.id}">
+            <span class="pname">${esc(p.p)}</span>
+            <span class="meta"><span class="lvl">${p.lvl}</span><span>${p.subj.length} asignaturas</span></span>
+          </button>`).join("")}</div>`).join("") + `</div>`;
+    return;
+  }
+
+  const groups = [];
+  let hits = 0;
+  for(const p of progs){
+    const ctxHit = terms.filter(t => p.ctx.includes(t));
+    const rest = terms.filter(t => !p.ctx.includes(t));
+    let list;
+    if(!terms.length) list = p.subj;
+    else if(!rest.length) list = p.subj;                         // el programa/facultad coincide con todo
+    else list = p.subj.filter(s => rest.every(t => s.k.includes(t)));
+    if(!list.length) continue;
+    hits += list.length;
+    groups.push({p, list, hl: rest.length ? rest : terms, whole: list.length===p.subj.length, ctxHit:ctxHit.length>0});
+  }
+  // los programas cuyo nombre coincide van primero; luego por cantidad de coincidencias
+  groups.sort((a,b)=> (b.ctxHit-a.ctxHit) || (b.list.length-a.list.length) || a.p.p.localeCompare(b.p.p,"es"));
+
+  if(!groups.length){
+    $out.innerHTML = `<div class="empty"><p>No hay resultados para <b>“${esc(state.q)}”</b>${anyFilter?" con los filtros actuales":""}.</p>
+      <p class="hint">${anyFilter?'<button class="chip" type="button" id="reset">Quitar filtros</button> · ':""}Prueba con menos palabras o parte de la palabra, por ejemplo <code data-try="calc">calc</code> o <code data-try="etica">etica</code>.</p></div>`;
+    return;
+  }
+
+  const distinct = new Set(groups.flatMap(g=>g.list.map(s=>s.k))).size;
+  const many = groups.length > 6 && terms.length;
+  $out.innerHTML = `<p class="status"><b>${hits}</b> resultado${hits!==1?"s":""} en <b>${groups.length}</b> programa${groups.length!==1?"s":""}${terms.length&&distinct!==hits?` · ${distinct} nombre${distinct!==1?"s":""} de asignatura distinto${distinct!==1?"s":""}`:""}</p>` +
+    groups.map(g => {
+      const f = FAC[g.p.f]; const key = String(g.p.id);
+      const closed = many && g.whole && !state.open.has(key) ? " closed" : "";
+      return `<section class="group${closed}" style="--c:var(${f.c})">
+        <button class="ghead" type="button" data-toggle="${key}" aria-expanded="${!closed}">
+          <span class="t"><span class="pname">${esc(g.p.p)}</span>
+            <span class="meta"><span class="fac">${g.p.f}</span><span>${f.n}</span><span class="lvl">${g.p.lvl}</span></span></span>
+          <span class="count">${g.whole?g.p.subj.length:`${g.list.length} / ${g.p.subj.length}`}</span>
+          <svg class="chev" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+        </button>
+        <ol>${g.list.map(s=>`<li><span class="n">${s.n}</span><span>${highlight(s,g.hl)}</span></li>`).join("")}</ol>
+      </section>`;
+    }).join("");
+}
+
+let t;
+$q.addEventListener("input", () => { clearTimeout(t); t = setTimeout(()=>{ state.q = $q.value; state.open.clear(); render(); }, 90); });
+$clear.addEventListener("click", () => { $q.value=""; state.q=""; render(); $q.focus(); });
+function save(){ try{ localStorage.setItem("uniajc-buscador", JSON.stringify({fac:state.fac,lvl:state.lvl})); }catch(e){} }
+
+$filters.addEventListener("click", e => {
+  const b = e.target.closest("[data-fac],[data-lvl]"); if(!b) return;
+  if(b.dataset.fac) state.fac = state.fac===b.dataset.fac ? null : b.dataset.fac;
+  if(b.dataset.lvl) state.lvl = state.lvl===b.dataset.lvl ? null : b.dataset.lvl;
+  const p = PROGS[state.prog]; if(p && ((state.fac&&p.f!==state.fac)||(state.lvl&&p.lvl!==state.lvl))) state.prog="";
+  save(); renderFilters(); render();
+});
+$filters.addEventListener("change", e => { if(e.target.id==="prog"){ state.prog = e.target.value; render(); } });
+
+$out.addEventListener("click", e => {
+  const card = e.target.closest("[data-open]");
+  if(card){ state.prog = card.dataset.open; renderFilters(); render(); window.scrollTo({top:0}); return; }
+  const tg = e.target.closest("[data-toggle]");
+  if(tg){ const g = tg.parentElement; const closed = g.classList.toggle("closed"); tg.setAttribute("aria-expanded", !closed);
+    closed ? state.open.delete(tg.dataset.toggle) : state.open.add(tg.dataset.toggle); return; }
+  const tr = e.target.closest("[data-try]");
+  if(tr){ $q.value = tr.dataset.try; state.q = $q.value; render(); return; }
+  if(e.target.id==="reset"){ state.fac=state.lvl=null; state.prog=""; save(); renderFilters(); render(); }
+});
+
+document.addEventListener("keydown", e => {
+  if(e.key==="/" && document.activeElement!==$q && !/input|select|textarea/i.test(document.activeElement.tagName)){ e.preventDefault(); $q.focus(); }
+  if(e.key==="Escape" && document.activeElement===$q){ $q.value=""; state.q=""; render(); }
+});
+
+renderFilters(); render();
+</script>
